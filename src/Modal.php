@@ -150,7 +150,7 @@ class Modal implements Responsable
         $data = $response->getData(true);
         $data['meta'] = [];
 
-        foreach (['mergeProps', 'deferredProps', 'cache'] as $key) {
+        foreach (['mergeProps', 'deepMergeProps', 'matchPropsOn', 'deferredProps', 'cache'] as $key) {
             if (! array_key_exists($key, $data)) {
                 continue;
             }

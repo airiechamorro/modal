@@ -63,7 +63,7 @@ watch(
     () => $page.props?._inertiaui_modal,
     (newModal, previousModal) => {
         if (newModal && previousModal && newModal.component === previousModal.component && sameUrlPath(newModal.url, previousModal.url)) {
-            modalStack.stack.value[0]?.updateProps(newModal.props ?? {})
+            modalStack.stack.value[0]?.updateFromResponseData(newModal)
         }
     },
 )

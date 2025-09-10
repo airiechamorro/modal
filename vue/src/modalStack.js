@@ -242,7 +242,7 @@ class Modal {
             },
         })
             .then((response) => {
-                this.updateProps(response.data.props)
+                this.updateFromResponseData(response.data)
                 options.onSuccess?.(response)
             })
             .catch((error) => {
@@ -253,8 +253,90 @@ class Modal {
             })
     }
 
+    mergeOrMatchItems = (target, source, currentKey, matchPropsOn) => {
+        const matchOn = matchPropsOn.find((key) => {
+            const path = key.split('.').slice(0, -1).join('.')
+            return path === currentKey
+        })
+
+        if (!matchOn) {
+            return [...(Array.isArray(target) ? target : []), ...source]
+        }
+
+        const uniqueProperty = matchOn.split('.').pop() || ''
+        const targetArray = Array.isArray(target) ? target : []
+        const map = new Map()
+
+        targetArray.forEach((item) => {
+            if (item && typeof item === 'object' && uniqueProperty in item) {
+                map.set(item[uniqueProperty], item)
+            } else {
+                map.set(Symbol(), item)
+            }
+        })
+
+        source.forEach((item) => {
+            if (item && typeof item === 'object' && uniqueProperty in item) {
+                map.set(item[uniqueProperty], item)
+            } else {
+                map.set(Symbol(), item)
+            }
+        })
+
+        return Array.from(map.values())
+    }
+
+    updateFromResponseData = (responseData) => {
+        const meta = responseData?.meta ?? responseData ?? {}
+        const propsToMerge = meta.mergeProps || []
+        const propsToDeepMerge = meta.deepMergeProps || []
+        const matchPropsOn = meta.matchPropsOn || []
+
+        const incomingProps = { ...(responseData?.props || {}) }
+
+        propsToMerge.forEach((prop) => {
+            const incomingProp = incomingProps[prop]
+
+            if (Array.isArray(incomingProp)) {
+                incomingProps[prop] = this.mergeOrMatchItems(this.props.value[prop] || [], incomingProp, prop, matchPropsOn)
+            } else if (typeof incomingProp === 'object' && incomingProp !== null) {
+                incomingProps[prop] = {
+                    ...(this.props.value[prop] || {}),
+                    ...incomingProp,
+                }
+            }
+        })
+
+        const deepMerge = (target, source, currentKey) => {
+            if (Array.isArray(source)) {
+                return this.mergeOrMatchItems(target, source, currentKey, matchPropsOn)
+            }
+
+            if (typeof source === 'object' && source !== null) {
+                return Object.keys(source).reduce(
+                    (acc, key) => {
+                        acc[key] = deepMerge(target ? target[key] : undefined, source[key], `${currentKey}.${key}`)
+                        return acc
+                    },
+                    { ...(target || {}) },
+                )
+            }
+
+            return source
+        }
+
+        propsToDeepMerge.forEach((prop) => {
+            const incomingProp = incomingProps[prop]
+            const currentProp = this.props.value[prop]
+            incomingProps[prop] = deepMerge(currentProp, incomingProp, prop)
+        })
+
+        Object.assign(this.props.value, { ...this.props.value, ...incomingProps })
+        this.response = { ...(this.response || {}), ...(responseData || {}), props: { ...this.props.value } }
+    }
+
     updateProps = (props) => {
-        Object.assign(this.props.value, props)
+        this.updateFromResponseData({ props, meta: this.response?.meta || {} })
     }
 }
 
