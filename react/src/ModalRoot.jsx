@@ -239,22 +239,29 @@ export const ModalStackProvider = ({ children }) => {
 
             options.onStart?.()
 
+            const headers = {
+                ...(options.headers ?? {}),
+                Accept: 'text/html, application/xhtml+xml',
+                'X-Inertia': true,
+                'X-Inertia-Partial-Component': this.response.component,
+                'X-Inertia-Version': this.response.version,
+                'X-Inertia-Partial-Data': keys.join(','),
+                'X-InertiaUI-Modal': generateId(),
+                'X-InertiaUI-Modal-Use-Router': 0,
+                'X-InertiaUI-Modal-Base-Url': baseUrl,
+            }
+
+            // Add reset props header if specified
+            if (options.reset && options.reset.length > 0) {
+                headers['X-Inertia-Reset'] = options.reset.join(',')
+            }
+
             Axios({
                 url: this.response.url,
                 method,
                 data: method === 'get' ? {} : data,
                 params: method === 'get' ? data : {},
-                headers: {
-                    ...(options.headers ?? {}),
-                    Accept: 'text/html, application/xhtml+xml',
-                    'X-Inertia': true,
-                    'X-Inertia-Partial-Component': this.response.component,
-                    'X-Inertia-Version': this.response.version,
-                    'X-Inertia-Partial-Data': keys.join(','),
-                    'X-InertiaUI-Modal': generateId(),
-                    'X-InertiaUI-Modal-Use-Router': 0,
-                    'X-InertiaUI-Modal-Base-Url': baseUrl,
-                },
+                headers,
             })
                 .then((response) => {
                     this.updateFromResponseData(response.data)
@@ -408,6 +415,7 @@ export const ModalStackProvider = ({ children }) => {
             options.onStart,
             options.onSuccess,
             options.onError,
+            options.reset ?? [],
         ).then((modal) => {
             const listeners = options.listeners ?? {}
 
@@ -433,6 +441,7 @@ export const ModalStackProvider = ({ children }) => {
         onStart = null,
         onSuccess = null,
         onError = null,
+        reset = [],
     ) => {
         const modalId = generateId()
 
@@ -459,6 +468,11 @@ export const ModalStackProvider = ({ children }) => {
                 'X-InertiaUI-Modal': modalId,
                 'X-InertiaUI-Modal-Use-Router': useInertiaRouter ? 1 : 0,
                 'X-InertiaUI-Modal-Base-Url': baseUrl,
+            }
+
+            // Add reset props header if specified
+            if (reset && reset.length > 0) {
+                headers['X-Inertia-Reset'] = reset.join(',')
             }
 
             if (useInertiaRouter) {
